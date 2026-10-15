@@ -1,0 +1,103 @@
+# MedRemind — Documentação de Controllers (v1)
+
+## Auth
+
+### controllerRegister (POST /register)
+- Body: `nome`, `email`, `senha`
+- Validar campos obrigatórios
+- Verificar se `email` já existe na tabela `usuarios`
+- Gerar hash da senha com bcrypt
+- Inserir usuário
+- Retornar 201 + dados do usuário (sem senha)
+
+### controllerLogin (POST /login)
+- Body: `email`, `senha`
+- Validar campos obrigatórios
+- Verificar se `email` existe na tabela `usuarios`
+- Comparar senha com bcrypt
+- Gerar token JWT com: `id`, `nome`
+- Retornar 200 + token + dados do usuário (sem senha)
+
+## Medicamentos
+
+### controllerCreateMedicamento (POST /medicamentos)
+- Body: `nome`, `forma` (`comprimido` | `gota`), `quantidade_por_dose`, `esquema` (`tipo_recorrencia`, `intervalo_horas` ou `horarios_fixos`, `timezone`, `data_inicio`, `data_fim`)
+- Validar campos obrigatórios e coerência do esquema (`intervalo_horas` exigido se `tipo_recorrencia = intervalo`; `horarios_fixos` exigido se `tipo_recorrencia = horarios_fixos`)
+- Transação: inserir medicamento → inserir esquema (`ativo = true`) vinculado
+- Retornar 201 + medicamento com esquema
+
+### controllerListMedicamentos (GET /medicamentos)
+- Buscar medicamentos do usuário logado, com esquema ativo (join)
+- Retornar 200 + lista
+
+### controllerGetMedicamento (GET /medicamentos/:id)
+- Verificar se o medicamento pertence ao usuário logado (senão 404)
+- Buscar medicamento + esquema ativo
+- Retornar 200 + medicamento
+
+### controllerUpdateMedicamento (PUT /medicamentos/:id)
+- Verificar posse do medicamento
+- Body: `nome`, `forma`, `quantidade_por_dose` (dados fixos — não mexe no esquema)
+- Atualizar
+- Retornar 200 + medicamento atualizado
+
+### controllerDeleteMedicamento (DELETE /medicamentos/:id)
+- Verificar posse do medicamento
+- Deletar (cascade remove esquemas e doses relacionadas)
+- Retornar 204
+
+## Esquemas
+
+### controllerUpdateEsquema (POST /medicamentos/:id/esquemas)
+- Verificar posse do medicamento
+- Body: `tipo_recorrencia`, `intervalo_horas` ou `horarios_fixos`, `timezone`, `data_inicio`, `data_fim`
+- Transação: desativar (`ativo = false`) o esquema atual → inserir novo esquema (`ativo = true`)
+- Deletar doses futuras com status `pendente` do esquema antigo e gerar novas a partir do novo esquema
+- Retornar 201 + novo esquema
+
+## Doses
+
+### controllerListDosesHoje (GET /doses/hoje)
+- Buscar doses do dia atual do usuário logado (join medicamentos → esquemas → doses)
+- Agrupar: total programadas, total tomadas, total pendentes
+- Buscar a próxima dose pendente (menor `horario_previsto` futuro) com nome do medicamento
+- Retornar 200 + `{ resumo, proxima_dose, doses }`
+
+### controllerListHistorico (GET /doses/historico)
+- Query params: `data_inicio`, `data_fim` (opcional, default últimos 30 dias)
+- Buscar doses do usuário logado no período, agrupadas por dia
+- Retornar 200 + lista agrupada
+
+### controllerConfirmarDose (PATCH /doses/:id/confirmar)
+- Verificar se a dose pertence a um medicamento do usuário logado (senão 404)
+- Verificar se o status atual permite confirmação (`pendente` ou `adiada`)
+- Atualizar: `status = tomada`, `horario_confirmado = now()`, `proximo_alarme = null`
+- Retornar 200 + dose atualizada
+
+### controllerAdiarDose (PATCH /doses/:id/adiar)
+- Body: `minutos` (`10` | `20` | `30`)
+- Verificar posse da dose
+- Verificar se o status permite adiar (`pendente`)
+- Atualizar: `status = adiada`, `proximo_alarme = now() + minutos`, `qtd_repeticoes += 1`
+- Retornar 200 + dose atualizada
+
+## Push
+
+### controllerSalvarPushSubscription (POST /push/subscribe)
+- Body: `endpoint`, `keys.p256dh`, `keys.auth`
+- Upsert por (`usuario_id`, `endpoint`) — evita duplicar subscription do mesmo dispositivo
+- Retornar 201
+
+## Jobs internos (sem rota HTTP)
+
+### jobGerarDosesDoDia
+- Roda 1x por dia (ex: 00:05, `node-cron`)
+- Para cada esquema ativo, calcular os horários de dose do dia com base em `tipo_recorrencia` + `timezone`
+- Inserir em `doses` com `status = pendente` e `proximo_alarme = horario_previsto`
+
+### jobDispararAlarmes
+- Roda a cada 1 minuto (`node-cron`)
+- Buscar doses com `status in (pendente, adiada)` e `proximo_alarme <= now()`
+- Para cada uma: disparar Web Push pras subscriptions do usuário dono do medicamento
+- Se `qtd_repeticoes >= limite` (ex: 3): `status = nao_tomada`, `proximo_alarme = null`
+- Senão: `proximo_alarme = now() + intervalo_repeticao` (ex: 5 min), `qtd_repeticoes += 1`
