@@ -1,10 +1,8 @@
 const express = require('express')
-const { controllerTeste } = require('../controllers/controllerTeste')
-
+const { controllerRegister } = require('../controllers/controllerUsuarios')
 
 const routers = express()
 
-
-routers.get('/teste', controllerTeste)
+routers.post('/register', controllerRegister)
 
 module.exports = routers
