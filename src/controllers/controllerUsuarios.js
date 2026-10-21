@@ -1,4 +1,4 @@
-const { queryBuscarUsuarioPeloEmail, queryCadastrarUsuario } = require("../database/queryUsuarios")
+const { queryBuscarUsuarioPeloEmail, queryCadastrarUsuario } = require("../database/querys/queryUsuarios")
 const { validarEmail } = require('../utils/validations')
 const bcrypt = require('bcrypt')
 

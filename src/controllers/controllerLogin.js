@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const senhaJWT = process.env.JWT_PWD
-const { queryBuscarUsuarioPeloEmail } = require('../database/queryUsuarios')
+const { queryBuscarUsuarioPeloEmail } = require('../database/querys/queryUsuarios')
 
 const controllerLoginUsuario = async (req, res) => {
     const { email, senha } = req.body

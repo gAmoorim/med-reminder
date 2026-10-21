@@ -1,6 +1,6 @@
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
-const { queryBuscarUsuarioPeloId } = require('../database/queryUsuarios')
+const { queryBuscarUsuarioPeloId } = require('../database/querys/queryUsuarios')
 const senhaJWT = process.env.JWT_PWD
 
 
@@ -40,3 +40,5 @@ const auth = async (req, res, next) => {
         return res.satatus(401).json({ error: 'Token inválido ou expirado'})
     }
 }
+
+module.exports = auth
