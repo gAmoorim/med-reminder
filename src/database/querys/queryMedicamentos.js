@@ -1,6 +1,6 @@
 const knex = require('../connection')
 
-const criarMedicamentoComEsquema = async (usuarioId, dadosMedicamento, dadosEsquema) => {
+const queryCriarMedicamentoComEsquema = async (usuarioId, dadosMedicamento, dadosEsquema) => {
     return knex.transaction(async (trx) => {
         const [medicamento] = await trx('medicamentos')
             .insert({ ...dadosMedicamento, usuario_id: usuarioId })
@@ -14,7 +14,7 @@ const criarMedicamentoComEsquema = async (usuarioId, dadosMedicamento, dadosEsqu
     })
 }
 
-const listarMedicamentosDoUsuario = async (usuarioId) => {
+const queryListarMedicamentosDoUsuario = async (usuarioId) => {
     const rows = await knex('medicamentos as m')
         .join('esquemas as e', 'e.medicamento_id', 'm.id')
         .where({ 'm.usuario_id': usuarioId, 'e.ativo': true })
@@ -50,7 +50,24 @@ const listarMedicamentosDoUsuario = async (usuarioId) => {
     }))
 }
 
+const queryObterMedicamento = async (usuarioId, medicamentoId) => {
+    const medicamento = await knex('medicamentos')
+        .where({ id: medicamentoId, usuario_id: usuarioId })
+        .select('id', 'nome', 'forma', 'quantidade_por_dose')
+        .first()
+
+    if (!medicamento) return null
+
+    const esquema = await knex('esquemas')
+        .where({ medicamento_id: medicamento.id, ativo: true })
+        .select('id', 'tipo_recorrencia', 'intervalo_horas', 'horarios_fixos', 'timezone', 'data_inicio', 'data_fim')
+        .first()
+
+    return { ...medicamento, esquema }
+}
+
 module.exports = { 
-    criarMedicamentoComEsquema,
-    listarMedicamentosDoUsuario
+    queryCriarMedicamentoComEsquema,
+    queryListarMedicamentosDoUsuario,
+    queryObterMedicamento
 }
