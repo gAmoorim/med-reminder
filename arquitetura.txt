@@ -35,9 +35,9 @@
 - Buscar medicamento + esquema ativo
 - Retornar 200 + medicamento
 
-### controllerUpdateMedicamento (PUT /medicamentos/:id)
+### controllerAtualizarMedicamento (PUT /medicamentos/:id)
+- Body: `nome`, `forma`, (dados fixos — não mexe no esquema)
 - Verificar posse do medicamento
-- Body: `nome`, `forma`, `quantidade_por_dose` (dados fixos — não mexe no esquema)
 - Atualizar
 - Retornar 200 + medicamento atualizado
 
@@ -50,7 +50,7 @@
 
 ### controllerUpdateEsquema (POST /medicamentos/:id/esquemas)
 - Verificar posse do medicamento
-- Body: `tipo_recorrencia`, `intervalo_horas` ou `horarios_fixos`, `timezone`, `data_inicio`, `data_fim`
+- Body: `quantidade_por_dose`, `tipo_recorrencia`, `intervalo_horas` ou `horarios_fixos`, `timezone`, `data_inicio`, `data_fim`
 - Transação: desativar (`ativo = false`) o esquema atual → inserir novo esquema (`ativo = true`)
 - Deletar doses futuras com status `pendente` do esquema antigo e gerar novas a partir do novo esquema
 - Retornar 201 + novo esquema

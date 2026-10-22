@@ -1,19 +1,23 @@
-const { queryCriarMedicamentoComEsquema, queryListarMedicamentosDoUsuario, queryObterMedicamento } = require("../database/querys/queryMedicamentos");
+const { queryCriarMedicamentoComEsquema, queryListarMedicamentosDoUsuario, queryObterMedicamentoComEsquema, queryBuscarMedicamento, queryAtualizarMedicamento } = require("../database/querys/queryMedicamentos");
 
 const controllerCreateMedicamento = async (req, res) => {
-    const { nome, forma, quantidade_por_dose, esquema } = req.body //"tipo_recorrencia" so pode ser fixo ou intervalo
+    const { nome, forma, esquema } = req.body //"tipo_recorrencia" so pode ser fixo ou intervalo
 
     const {
-        tipo_recorrencia, intervalo_horas, horarios_fixos,
+        quantidade_por_dose, tipo_recorrencia, intervalo_horas, horarios_fixos,
         timezone, data_inicio, data_fim
     } = esquema || {};
     
-    if (!nome || !forma || !quantidade_por_dose || !esquema) {
+    if (!nome || !forma || !esquema) {
         return res.status(400).json({ erro: 'Campos obrigatórios faltando'})
     }
 
     if (!['comprimido', 'gota'].includes(forma)) {
         return res.status(400).json({ error: 'forma inválida'})
+    }
+
+    if (!(quantidade_por_dose > 0)) {
+        return res.status(400).json({ erro: 'quantidade_por_dose deve ser maior que 0' });
     }
 
     if (!['intervalo', 'horarios_fixos'].includes(tipo_recorrencia)) {
@@ -34,7 +38,7 @@ const controllerCreateMedicamento = async (req, res) => {
 
     try {
         const usuarioId = req.usuario.id
-        const resultado = await queryCriarMedicamentoComEsquema(usuarioId, {nome, forma, quantidade_por_dose}, esquema)
+        const resultado = await queryCriarMedicamentoComEsquema(usuarioId, {nome, forma}, esquema)
 
         if (!resultado) {
             return res.status(404).json({ error: 'Nenhum medicamento encontrado'})
@@ -73,7 +77,7 @@ const controllerObterMedicamento = async (req, res) => {
     }
 
     try {
-        const medicamento = await queryObterMedicamento(usuarioId, medicamentoId)
+        const medicamento = await queryObterMedicamentoComEsquema(usuarioId, medicamentoId)
 
         if (!medicamento) {
             return res.status(404).json({ erro: 'Medicamento não encontrado' })
@@ -87,11 +91,32 @@ const controllerObterMedicamento = async (req, res) => {
 }
 
 const controllerAtualizarMedicamento = async (req, res) => {
-    const { nome, forma, quantidade_por_dose } = req.body
+    const { nome, forma } = req.body
+    const { medicamentoId} = req.params
+    const usuarioId = req.usuario.id
+
+    if (!medicamentoId) {
+        return res.status(400).json({ error: 'Informe o id do medicamento'})
+    }
+
+    try {
+        const medicamento = await queryBuscarMedicamento(medicamentoId)
+
+        if (!medicamento || medicamento.usuario_id !== usuarioId) {
+            return res.status(404).json({ erro: 'Medicamento não encontrado' })
+        }
+
+        const medicamentoAtualizado = await queryAtualizarMedicamento(medicamentoId, usuarioId, { nome, forma })
+        return res.status(200).json({mensagem: 'Medicamento atualizado', medicamentoAtualizado})
+    } catch (error) {
+        console.error("Ocorreu um erro ao atualizar o medicamento:", error)
+        return res.status(500).json({ error: `Erro ao atualizar o medicamento: ${error.message}`})
+    }
 }
 
 module.exports = {
     controllerCreateMedicamento,
     controllerListarMedicamentos,
-    controllerObterMedicamento
+    controllerObterMedicamento,
+    controllerAtualizarMedicamento
 }
