@@ -14,7 +14,6 @@ CREATE TABLE medicamentos (
   usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
   nome VARCHAR(255) NOT NULL,
   forma VARCHAR(20) NOT NULL CHECK (forma IN ('comprimido', 'gota')),
-  quantidade_por_dose NUMERIC(5,2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -22,6 +21,7 @@ CREATE TABLE medicamentos (
 CREATE TABLE esquemas (
   id SERIAL PRIMARY KEY,
   medicamento_id INTEGER NOT NULL REFERENCES medicamentos(id) ON DELETE CASCADE,
+  quantidade_por_dose NUMERIC(5,2) NOT NULL,
   tipo_recorrencia VARCHAR(20) NOT NULL CHECK (tipo_recorrencia IN ('intervalo', 'horarios_fixos')),
   intervalo_horas INTEGER,          -- obrigatório se tipo_recorrencia = 'intervalo'
   horarios_fixos JSONB,             -- ex: ["08:00", "14:00", "20:00"]
