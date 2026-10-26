@@ -66,10 +66,10 @@ const queryObterMedicamentoComEsquema = async (usuarioId, medicamentoId) => {
     return { ...medicamento, esquema }
 }
 
-const queryBuscarMedicamento = async (medicamentoId) => {
+const queryBuscarMedicamentoEverificarDono = async (medicamentoId, usuarioId) => {
     return knex('medicamentos')
-    .where({ id: medicamentoId })
-    .select('id', 'usuario_id', 'nome', 'forma')
+    .where({ id: medicamentoId, usuario_id: usuarioId })
+    .select('id', 'nome', 'forma')
     .first()
 }
 
@@ -82,10 +82,17 @@ const queryAtualizarMedicamento = async (medicamentoId, usuarioId, { nome, forma
     return medicamento
 }
 
+const queryDeletarMedicamento = async (medicamentoId, usuarioId) => {
+    return knex('medicamentos')
+    .where({ id: medicamentoId, usuario_id: usuarioId})
+    .del()
+}
+
 module.exports = { 
     queryCriarMedicamentoComEsquema,
     queryListarMedicamentosDoUsuario,
     queryObterMedicamentoComEsquema,
-    queryBuscarMedicamento,
-    queryAtualizarMedicamento
+    queryBuscarMedicamentoEverificarDono,
+    queryAtualizarMedicamento,
+    queryDeletarMedicamento
 }

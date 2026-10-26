@@ -1,4 +1,4 @@
-const { queryCriarMedicamentoComEsquema, queryListarMedicamentosDoUsuario, queryObterMedicamentoComEsquema, queryBuscarMedicamento, queryAtualizarMedicamento } = require("../database/querys/queryMedicamentos");
+const { queryCriarMedicamentoComEsquema, queryListarMedicamentosDoUsuario, queryObterMedicamentoComEsquema, queryBuscarMedicamentoEverificarDono, queryAtualizarMedicamento, queryDeletarMedicamento } = require("../database/querys/queryMedicamentos");
 
 const controllerCreateMedicamento = async (req, res) => {
     const { nome, forma, esquema } = req.body //"tipo_recorrencia" so pode ser fixo ou intervalo
@@ -100,10 +100,10 @@ const controllerAtualizarMedicamento = async (req, res) => {
     }
 
     try {
-        const medicamento = await queryBuscarMedicamento(medicamentoId)
+        const medicamento = await queryBuscarMedicamentoEverificarDono(medicamentoId, usuarioId)
 
-        if (!medicamento || medicamento.usuario_id !== usuarioId) {
-            return res.status(404).json({ erro: 'Medicamento não encontrado' })
+        if (!medicamento) {
+            return res.status(404).json({ error: 'Medicamento não encontrado' })
         }
 
         const medicamentoAtualizado = await queryAtualizarMedicamento(medicamentoId, usuarioId, { nome, forma })
@@ -114,9 +114,33 @@ const controllerAtualizarMedicamento = async (req, res) => {
     }
 }
 
+const controllerDeletarMedicamento = async (req, res) => {
+    const {medicamentoId} = req.params
+    const usuarioId = req.usuario.id
+
+    if (!medicamentoId) {
+        return res.status(400).json({ error: 'Informe o id do medicamento'})
+    }
+    
+    try {
+        const medicamento = await queryBuscarMedicamentoEverificarDono(medicamentoId, usuarioId)
+
+        if (!medicamento) {
+            return res.status(404).json({ error: 'Medicamento não encontrado'})
+        }
+        
+        await queryDeletarMedicamento(medicamentoId, usuarioId)
+        return res.status(200).json({ mensagem: 'Medicamento deletado'})
+    } catch (error) {
+        console.error("Ocorreu um erro ao atualizar o medicamento:", error)
+        return res.status(500).json({ error: `Erro ao atualizar o medicamento: ${error.message}`})
+    }
+}
+
 module.exports = {
     controllerCreateMedicamento,
     controllerListarMedicamentos,
     controllerObterMedicamento,
-    controllerAtualizarMedicamento
+    controllerAtualizarMedicamento,
+    controllerDeletarMedicamento
 }
